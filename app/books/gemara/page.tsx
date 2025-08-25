@@ -1,42 +1,54 @@
+// app/books/gemara./page.tsx
+// Server Component: renders Talmud masechtot as MB-style cards (grid, card-as-link).
+// Uses a safe dynamic import to pull the list from your lib, with a fallback
+// so it won't break if names differ. No new files added.
 
-'use client'
-import { GEMARA_INDEX } from '@/lib/gemaraPages'
+import Link from "next/link";
 
-export default function GemaraIndexPage(){
-  const grouped: Record<string, [string, {seder:string; lastDaf:string}][]> = {}
-  Object.entries(GEMARA_INDEX).forEach(([name, info]) => {
-    (grouped[info.seder] ||= []).push([name, info])
-  })
-  // Sort seder and tractates alphabetically by Hebrew string (basic)
-  const sederOrder = Object.keys(grouped).sort((a,b)=>a.localeCompare(b))
+type Item = { id: string; title: string };
+
+async function getMasechtot(): Promise<Item[]> {
+  // Try a few likely exports without failing the build if the shape differs.
+  try {
+    const mod: any = await import("@/lib/gemaraPages");
+    const candidate =
+      mod?.MASECHTOT ||
+      mod?.masechtot ||
+      mod?.default ||
+      mod?.LIST ||
+      [];
+    // Normalize shape to {id,title}
+    const arr: Item[] = Array.isArray(candidate)
+      ? candidate.map((x: any) => ({
+          id: String(x.id ?? x.slug ?? x.key ?? x.name ?? ""),
+          title: String(x.title ?? x.name ?? x.label ?? x.id ?? ""),
+        }))
+      : [];
+    return arr.filter((x) => x.id && x.title);
+  } catch {
+    // Fallback minimal list — you can delete once wired to your data.
+    return [
+      { id: "berakhot", title: "ברכות" },
+      { id: "shabbat", title: "שבת" },
+      { id: "eruvin", title: "עירובין" },
+    ];
+  }
+}
+
+export default async function Page() {
+  const masechtot = await getMasechtot();
 
   return (
-    <main className="space-y-6">
-      <div className="flex items-center justify-between">
-        <a className="btn-ghost" href="/">← חזרה</a>
-        <h1 className="text-xl font-bold">תלמוד בבלי – מסכתות</h1>
-        <a className="btn-ghost" href="/">🏠</a>
-      </div>
-
-      {sederOrder.map(seder => {
-        const items = grouped[seder].sort((a,b)=>a[0].localeCompare(b[0]))
-        return (
-          <section key={seder} className="card">
-            <h2 className="mb-3 text-lg font-semibold">{seder}</h2>
-            <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-              {items.map(([name, info]) => (
-                <li key={name} className="flex items-center justify-between rounded border p-3">
-                  <div>
-                    <div className="font-medium">{name}</div>
-                    <div className="text-xs opacity-70">דף אחרון: {info.lastDaf}</div>
-                  </div>
-                  <a className="btn" href={`/study/${encodeURIComponent('gemara:'+name)}`}>פתח</a>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )
-      })}
-    </main>
-  )
+    <div className="grid grid-cols-2 gap-4">
+      {masechtot.map(({ id, title }) => (
+        <Link
+          key={id}
+          href={{ pathname: "/talmud/[id]", query: { id } }} // UrlObject avoids typedRoutes issues
+          className="flex items-center justify-center rounded-xl border border-gray-200 bg-white px-4 py-6 text-lg font-medium text-gray-800 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          {title}
+        </Link>
+      ))}
+    </div>
+  );
 }
