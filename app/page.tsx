@@ -32,7 +32,7 @@ export default function Page(){
         </Link>
         <Link href={`/study/${encodeURIComponent('musar:mesilat-yasharim')}`} className="card transition hover:opacity-90">
           <h3 className="mb-2 text-lg font-bold">ספרי מוסר</h3>
-          <p className="opacity-70 text-sm">מסילת ישרים (ברירת מחדל) → פרקים</p>
+          <p className="opacity-70 text-sm"></p>
         </Link>
       </section>
     </main>
