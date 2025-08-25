@@ -6,7 +6,17 @@ import * as gp from "@/lib/gemaraPages";
 
 type Item = { id: string; title: string };
 
-function normalize(): Item[] {
+// יוצג אם אין נתונים מהlib (כדי שלא יהיה מסך ריק)
+const FALLBACK: Item[] = [
+  { id: "berakhot", title: "ברכות" },
+  { id: "shabbat", title: "שבת" },
+  { id: "eruvin", title: "עירובין" },
+  { id: "pesachim", title: "פסחים" },
+  { id: "yoma", title: "יומא" },
+  { id: "sukkah", title: "סוכה" },
+];
+
+function getMasechtot(): Item[] {
   const anygp: any = gp as any;
   const candidate =
     anygp.masechtot ||
@@ -23,11 +33,12 @@ function normalize(): Item[] {
       }))
     : [];
 
-  return arr.filter((x) => x.id && x.title);
+  const cleaned = arr.filter((x) => x.id && x.title);
+  return cleaned.length ? cleaned : FALLBACK;
 }
 
 export default function Page() {
-  const masechtot = normalize();
+  const masechtot = getMasechtot();
 
   return (
     <div className="grid grid-cols-2 gap-4">
