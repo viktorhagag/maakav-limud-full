@@ -1,0 +1,5 @@
+// הוסף לראש הקובץ Admin.tsx:
+import AdminExitButton from "@/components/AdminExitButton";
+
+// בתוך ה- return של עמוד האדמין, הכי למעלה:
+<AdminExitButton />

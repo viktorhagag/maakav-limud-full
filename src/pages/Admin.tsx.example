@@ -1,0 +1,10 @@
+import AdminExitButton from "@/components/AdminExitButton";
+
+export default function Admin() {
+  return (
+    <div className="p-4">
+      <AdminExitButton />
+      {/* כאן שים את התוכן הקיים של האדמין שלך */}
+    </div>
+  );
+}
