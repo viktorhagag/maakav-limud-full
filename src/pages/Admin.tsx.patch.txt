@@ -1,0 +1,18 @@
+
+// In Admin.tsx, replace setNodes(...) call with setNodesReplace(...)
+// Example patched function:
+/*
+async function run(label: string, fn: ()=>Promise<Node[]>) {
+  try {
+    setBusy(label + '...')
+    const cat = await fn()
+    await setNodesReplace(cat)  // clears + bulkPut
+    setJsonText(JSON.stringify(cat, null, 2))
+    setBusy('')
+    alert(label + ' הושלם')
+  } catch (e:any) {
+    setBusy('')
+    alert('שגיאה ב-' + label + ': ' + e?.message)
+  }
+}
+*/
