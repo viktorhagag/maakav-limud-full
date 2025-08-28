@@ -1,0 +1,88 @@
+[
+  {
+    "id": "home:gemara",
+    "title": "גמרא",
+    "kind": "card",
+    "color": "brown",
+    "order": 1
+  },
+  {
+    "id": "home:mishna",
+    "title": "משנה",
+    "kind": "card",
+    "color": "brown",
+    "order": 2
+  },
+  {
+    "id": "home:tanakh",
+    "title": "תנ״ך",
+    "kind": "card",
+    "color": "blue",
+    "order": 3
+  },
+  {
+    "id": "home:rambam",
+    "title": "רמב״ם",
+    "kind": "card",
+    "color": "grey",
+    "order": 4
+  },
+  {
+    "id": "home:sa",
+    "title": "שולחן ערוך",
+    "kind": "card",
+    "color": "orange",
+    "order": 5
+  },
+  {
+    "id": "home:yeru",
+    "title": "ירושלמי",
+    "kind": "card",
+    "color": "grey",
+    "order": 6
+  },
+  {
+    "id": "home",
+    "title": "ספרים",
+    "kind": "card",
+    "order": 0
+  },
+  {
+    "id": "tanakh",
+    "title": "תנ״ך",
+    "kind": "card",
+    "color": "blue",
+    "parentId": "home",
+    "order": 3
+  },
+  {
+    "id": "tanakh:torah",
+    "title": "תורה",
+    "kind": "card",
+    "color": "blue",
+    "parentId": "tanakh",
+    "order": 1
+  },
+  {
+    "id": "tanakh:torah:bereshit",
+    "title": "בראשית",
+    "kind": "card",
+    "color": "blue",
+    "parentId": "tanakh:torah",
+    "order": 1
+  },
+  {
+    "id": "tanakh:torah:bereshit:1",
+    "title": "פרק א",
+    "kind": "check",
+    "parentId": "tanakh:torah:bereshit",
+    "order": 1
+  },
+  {
+    "id": "tanakh:torah:bereshit:2",
+    "title": "פרק ב",
+    "kind": "check",
+    "parentId": "tanakh:torah:bereshit",
+    "order": 2
+  }
+]
