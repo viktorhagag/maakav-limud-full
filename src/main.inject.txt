@@ -1,0 +1,4 @@
+// ב-main.tsx או App.tsx הוסף קריאה לאתחול:
+import { bootIfEmpty } from "@/store/boot";
+
+bootIfEmpty(); // יריץ בנייה אוטומטית אם אין נתונים
