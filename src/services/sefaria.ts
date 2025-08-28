@@ -1,3 +1,4 @@
+
 import type { Node } from '@/lib/db'
 
 const BASE = 'https://www.sefaria.org/api'
@@ -8,6 +9,7 @@ async function j(url: string){
   return await r.json()
 }
 
+function A<T>(x:any): T[] { return Array.isArray(x) ? (x as T[]) : [] }
 function toHebNum(n: number){
   const map = ['','א','ב','ג','ד','ה','ו','ז','ח','ט','י','יא','יב','יג','יד','טו','טז','יז','יח','יט','כ','כא','כב','כג','כד','כה','כו','כז','כח','כט','ל']
   if (n < map.length) return map[n]
@@ -15,25 +17,27 @@ function toHebNum(n: number){
 }
 
 /** ------------------ TANAKH ------------------ **/
-// Tanakh -> Torah/Prophets/Writings -> Books -> Chapters
 export async function buildTanakh(): Promise<Node[]> {
   const nodes: Node[] = []
   nodes.push({ id:'home', title:'ספרים', kind:'card', order:0 })
-  const tanakh: Node = { id:'tanakh', title:'תנ״ך', kind:'card', color:'blue', parentId:'home', order:3 }
-  nodes.push(tanakh)
-  const cats = ['Torah','Prophets','Writings']
-  const hebCats = ['תורה','נביאים','כתובים']
+  nodes.push({ id:'tanakh', title:'תנ״ך', kind:'card', color:'blue', parentId:'home', order:3 })
+
+  const cats = [
+    { api: 'Torah', id: 'tanakh:torah', he: 'תורה' },
+    { api: 'Prophets', id: 'tanakh:neviim', he: 'נביאים' },
+    { api: 'Writings', id: 'tanakh:ketuvim', he: 'כתובים' },
+  ]
   for (let i=0;i<cats.length;i++){
-    const catId = ['tanakh:torah','tanakh:neviim','tanakh:ketuvim'][i]
-    nodes.push({ id:catId, title:hebCats[i], kind:'card', color:'blue', parentId:'tanakh', order:i+1 })
-    const list = await j(`${BASE}/category/${cats[i]}`)
+    const cat = cats[i]
+    nodes.push({ id:cat.id, title:cat.he, kind:'card', color:'blue', parentId:'tanakh', order:i+1 })
+    const list = await j(`${BASE}/category/${cat.api}`)
+    const books = Array.isArray(list.books) ? list.books as string[] : []
     let order = 1
-    for (const b of (list.books as string[])) {
+    for (const b of books) {
       const meta = await j(`${BASE}/index/${encodeURIComponent(b)}`)
       const heb = meta.heTitle as string
-      const bid = `${catId}:${b.replace(/\s+/g,'_')}`
-      nodes.push({ id: bid, title: heb, kind:'card', color:'blue', parentId:catId, order: order++ })
-      // chapters count
+      const bid = `${cat.id}:${b.replace(/\s+/g,'_')}`
+      nodes.push({ id: bid, title: heb, kind:'card', color:'blue', parentId:cat.id, order: order++ })
       const lengths = meta.lengths || meta?.schema?.lengths || []
       const chapCount = Array.isArray(lengths) ? (lengths[0] || 0) : 0
       for (let c=1; c<=chapCount; c++){
@@ -45,26 +49,24 @@ export async function buildTanakh(): Promise<Node[]> {
 }
 
 /** ------------------ MISHNAH ------------------ **/
-// Mishnah -> Orders -> Tractates -> Perakim -> Mishnayot
 export async function buildMishnah(): Promise<Node[]> {
   const nodes: Node[] = []
   nodes.push({id:'home', title:'ספרים', kind:'card', order:0})
-  const rootId = 'mishnah'
-  nodes.push({id:rootId, title:'משנה', kind:'card', color:'brown', parentId:'home', order:2})
+  nodes.push({id:'mishnah', title:'משנה', kind:'card', color:'brown', parentId:'home', order:2})
   const orders = await j(`${BASE}/category/Mishnah`)
   let o=1
-  for (const order of orders.contents as any[]) {
-    const orderHeb = order.heCategory || order.heTitle
-    const orderId = `${rootId}:${(order.category || order.title).replace(/\s+/g,'_')}`
-    nodes.push({id:orderId, title:orderHeb, kind:'card', color:'brown', parentId:rootId, order:o++})
+  for (const order of A<any>(orders.contents)) {
+    const orderHeb = order.heCategory || order.heTitle || order.he
+    const orderId = `mishnah:${(order.category || order.title || 'order').replace(/\s+/g,'_')}`
+    nodes.push({id:orderId, title:orderHeb, kind:'card', color:'brown', parentId:'mishnah', order:o++})
     let t=1
-    for (const m of order.contents as any[]) {
+    for (const m of A<any>(order.contents)) {
       if (!m.title) continue
       const meta = await j(`${BASE}/index/${encodeURIComponent(m.title)}`)
       const he = meta.heTitle as string
       const mId = `${orderId}:${m.title.replace(/\s+/g,'_')}`
       nodes.push({id:mId, title:he, kind:'card', color:'brown', parentId:orderId, order:t++})
-      const perakim: number = (meta.lengths && meta.lengths[0]) || 0
+      const perakim: number = (Array.isArray(meta.lengths) && meta.lengths[0]) || 0
       for (let p=1;p<=perakim;p++){
         const pId = `${mId}:${p}`
         nodes.push({id:pId, title:`פרק ${toHebNum(p)}`, kind:'card', color:'brown', parentId:mId, order:p})
@@ -80,8 +82,6 @@ export async function buildMishnah(): Promise<Node[]> {
 }
 
 /** ------------------ TALMUD BAVLI ------------------ **/
-// Bavli -> Orders (Moed/Nashim/Nezikin/Kodashim/Taharot/Zeraim*) -> Tractates -> Dafim
-// We use a static mapping for grouping; daf count from index.lengths[0].
 const BAVLI_ORDER: Record<string, string> = {
   'Berakhot':'Zeraim',
   'Shabbat':'Moed','Eruvin':'Moed','Pesachim':'Moed','Shekalim':'Moed','Rosh Hashanah':'Moed','Yoma':'Moed','Sukkah':'Moed','Beitzah':'Moed','Taanit':'Moed','Megillah':'Moed','Moed Katan':'Moed','Chagigah':'Moed',
@@ -96,16 +96,14 @@ export async function buildBavli(): Promise<Node[]> {
   nodes.push({id:'home', title:'ספרים', kind:'card', order:0})
   nodes.push({id:'gemara', title:'גמרא', kind:'card', color:'brown', parentId:'home', order:1})
 
-  // orders
   const orders = ['Moed','Nashim','Nezikin','Kodashim','Taharot','Zeraim']
   orders.forEach((o,idx)=> nodes.push({id:`gemara:${o.toLowerCase()}`, title:ORDER_HE[o] ?? o, kind:'card', color:'brown', parentId:'gemara', order:idx+1}))
 
-  // fetch list of Bavli tractates
   const cat = await j(`${BASE}/category/Talmud`)
-  const bavli = (cat?.contents || []).find((c:any)=>c.category==='Bavli' || c.title==='Bavli')
+  const bavli = (A<any>(cat.contents)).find((c:any)=>c.category==='Bavli' || c.title==='Bavli')
   if (!bavli) return nodes
   let counters: Record<string, number> = {}
-  for (const t of (bavli.contents as any[])) {
+  for (const t of A<any>(bavli.contents)) {
     if (!t.title) continue
     const meta = await j(`${BASE}/index/${encodeURIComponent(t.title)}`)
     const he = meta.heTitle as string
@@ -115,9 +113,9 @@ export async function buildBavli(): Promise<Node[]> {
     counters[orderKey] = (counters[orderKey] ?? 0) + 1
     const mId = `${parentId}:${eng.replace(/\s+/g,'_')}`
     nodes.push({id:mId, title:he, kind:'card', color:'brown', parentId, order:counters[orderKey]})
-    const dafCount = (meta.lengths && meta.lengths[0]) || 0
+    const dafCount = (Array.isArray(meta.lengths) && meta.lengths[0]) || 0
     for (let d=2; d<=dafCount+1; d++){
-      const label = d===2 ? 'ב' : toHebNum(d) // start from דף ב כמו בסריקות
+      const label = d===2 ? 'ב' : toHebNum(d)
       nodes.push({id:`${mId}:${d}`, title:`דף ${label}`, kind:'check', parentId:mId, order:d-1})
     }
   }
@@ -131,14 +129,14 @@ export async function buildYerushalmi(): Promise<Node[]> {
   nodes.push({id:'yeru', title:'ירושלמי', kind:'card', color:'grey', parentId:'home', order:6})
   const cat = await j(`${BASE}/category/Jerusalem_Talmud`)
   let i=1
-  for (const t of (cat.contents as any[])) {
+  for (const t of A<any>(cat.contents)) {
     if (!t.title) continue
     const meta = await j(`${BASE}/index/${encodeURIComponent(t.title)}`)
     const he = meta.heTitle as string
     const mId = `yeru:${t.title.replace(/\s+/g,'_')}`
     nodes.push({id:mId, title:he, kind:'card', color:'grey', parentId:'yeru', order:i++})
     const lengths = meta.lengths || []
-    const perakim = lengths[0] || 0
+    const perakim = Array.isArray(lengths) ? (lengths[0] || 0) : 0
     for (let p=1;p<=perakim;p++){
       const pId = `${mId}:${p}`
       nodes.push({id:pId, title:`פרק ${toHebNum(p)}`, kind:'card', color:'grey', parentId:mId, order:p})
@@ -169,9 +167,8 @@ export async function buildShulchanAruch(): Promise<Node[]> {
   for (const part of SA_PARTS) {
     const partId = `sa:${part.eng.replace(/\s+/g,'_')}`
     nodes.push({id:partId, title:part.he, kind:'card', color:'orange', parentId:'sa', order:idx++})
-    // number of simanim from index.lengths[0]
     const meta = await j(`${BASE}/index/${encodeURIComponent(part.eng)}`)
-    const simanim = (meta.lengths && meta.lengths[0]) || 0
+    const simanim = (Array.isArray(meta.lengths) && meta.lengths[0]) || 0
     for (let s=1;s<=simanim;s++){
       const simanId = `${partId}:${s}`
       nodes.push({id:simanId, title:`סימן ${toHebNum(s)}`, kind:'card', color:'orange', parentId:partId, order:s})
@@ -185,8 +182,7 @@ export async function buildShulchanAruch(): Promise<Node[]> {
   return nodes
 }
 
-/** ------------------ RAMBAM (Mishneh Torah) ------------------ **/
-// Mishneh Torah -> Books -> Hilchot -> Chapters -> Halachot
+/** ------------------ RAMBAM ------------------ **/
 export async function buildRambam(): Promise<Node[]> {
   const nodes: Node[] = []
   nodes.push({id:'home', title:'ספרים', kind:'card', order:0})
@@ -194,17 +190,17 @@ export async function buildRambam(): Promise<Node[]> {
 
   const root = await j(`${BASE}/category/Mishneh_Torah`)
   let b=1
-  for (const book of (root.contents as any[])) {
-    const bookId = `rambam:${(book.title || book.category).replace(/\s+/g,'_')}`
-    nodes.push({id:bookId, title:(book.heTitle || book.heCategory), kind:'card', color:'grey', parentId:'rambam', order:b++})
+  for (const book of A<any>(root.contents)) {
+    const bookId = `rambam:${(book.title || book.category || 'book').replace(/\s+/g,'_')}`
+    nodes.push({id:bookId, title:(book.heTitle || book.heCategory || book.he), kind:'card', color:'grey', parentId:'rambam', order:b++})
     let h=1
-    for (const hil of (book.contents as any[])) {
+    for (const hil of A<any>(book.contents)) {
       if (!hil.title) continue
       const meta = await j(`${BASE}/index/${encodeURIComponent(hil.title)}`)
       const he = meta.heTitle as string
       const hilId = `${bookId}:${hil.title.replace(/\s+/g,'_')}`
       nodes.push({id:hilId, title:he, kind:'card', color:'grey', parentId:bookId, order:h++})
-      const chapters = (meta.lengths && meta.lengths[0]) || 0
+      const chapters = (Array.isArray(meta.lengths) && meta.lengths[0]) || 0
       for (let p=1;p<=chapters;p++){
         const pId = `${hilId}:${p}`
         nodes.push({id:pId, title:`פרק ${toHebNum(p)}`, kind:'card', color:'grey', parentId:hilId, order:p})
@@ -219,33 +215,33 @@ export async function buildRambam(): Promise<Node[]> {
   return nodes
 }
 
-/** ------------------ BUILD EVERYTHING ------------------ **/
+/** ------------------ BUILD EVERYTHING (SEQUENTIAL + SAFE) ------------------ **/
 export async function buildEverything(): Promise<Node[]> {
-  // Compose under one 'home' with category cards (gemara/mishnah/tanakh/rambam/sa/yeru)
-  const [tanakh, mishnah, bavli, sa, rambam, yeru] = await Promise.all([
-    buildTanakh(), buildMishnah(), buildBavli(), buildShulchanAruch(), buildRambam(), buildYerushalmi()
-  ])
-  function graft(title:string, color:'blue'|'brown'|'orange'|'grey', prefix:string, arr:Node[], order:number): Node[] {
-    const out: Node[] = []
-    out.push({id:prefix, title, kind:'card', color, parentId:'home', order})
-    const byId = new Map(arr.map(n=>[n.id,n]))
-    // attach only nodes that are not 'home'
-    for (const n of arr) {
-      if (n.id==='home') continue
-      const nn: Node = { ...n }
-      if (!nn.parentId || nn.parentId==='home') nn.parentId = prefix
-      out.push(nn)
-    }
-    return out
-  }
   const home: Node[] = [{id:'home', title:'ספרים', kind:'card', order:0}]
-  return [
-    ...home,
-    ...graft('גמרא','brown','gemara',bavli,1),
-    ...graft('משנה','brown','mishnah',mishnah,2),
-    ...graft('תנ״ך','blue','tanakh',tanakh,3),
-    ...graft('רמב״ם','grey','rambam',rambam,4),
-    ...graft('שולחן ערוך','orange','sa',sa,5),
-    ...graft('ירושלמי','grey','yeru',yeru,6),
-  ]
+  const out: Node[] = [...home]
+
+  async function graft(title:string, color:'blue'|'brown'|'orange'|'grey', prefix:string, fn:()=>Promise<Node[]>, order:number) {
+    try {
+      const arr = await fn()
+      out.push({id:prefix, title, kind:'card', color, parentId:'home', order})
+      for (const n of arr) {
+        if (n.id==='home') continue
+        const nn: Node = { ...n }
+        if (!nn.parentId || nn.parentId==='home') nn.parentId = prefix
+        out.push(nn)
+      }
+    } catch (e:any) {
+      out.push({id:`${prefix}:ERROR`, title:`שגיאת יבוא: ${title}`, kind:'card', color, parentId:'home', order})
+      console.error('IMPORT ERROR for', prefix, e?.message)
+    }
+  }
+
+  await graft('גמרא','brown','gemara',buildBavli,1)
+  await graft('משנה','brown','mishnah',buildMishnah,2)
+  await graft('תנ״ך','blue','tanakh',buildTanakh,3)
+  await graft('רמב״ם','grey','rambam',buildRambam,4)
+  await graft('שולחן ערוך','orange','sa',buildShulchanAruch,5)
+  await graft('ירושלמי','grey','yeru',buildYerushalmi,6)
+
+  return out
 }
