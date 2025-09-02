@@ -1,22 +1,16 @@
 import Dexie, { Table } from 'dexie'
 
 export interface Node {
-  id: string            // e.g. 'tanakh', 'tanakh:torah:bereshit'
+  id: string
   title: string
-  kind: 'card' | 'check' // card list page vs checklist page
+  kind: 'card' | 'check'
   color?: 'blue'|'brown'|'orange'|'grey'
   parentId?: string
   order: number
   meta?: Record<string, any>
 }
 
-export interface Progress {
-  id?: number
-  unitId: string // matches Node.id of kind 'check' item (leaf item)
-  count: number  // completions (0/1 toggled, or >1 for repetitions)
-  completedAt: string
-}
-
+export interface Progress { id?: number; unitId: string; count: number; completedAt: string }
 export interface Setting { key: string; value: any }
 
 class TTDB extends Dexie {
@@ -24,9 +18,9 @@ class TTDB extends Dexie {
   progress!: Table<Progress, number>
   settings!: Table<Setting, string>
   constructor() {
-    super('torah-tracker-ios')
+    super('torah-tracker-fresh')
     this.version(1).stores({
-      nodes: 'id, parentId, kind, order',
+      nodes: '&id, parentId, kind, order',
       progress: '++id, unitId, completedAt',
       settings: 'key'
     })

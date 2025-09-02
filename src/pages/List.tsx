@@ -1,19 +1,17 @@
 import { useParams, Link } from 'react-router-dom'
 import Header from '@/ui/Header'
 import { useStore } from '@/store/store'
-import { childrenOf } from '@/lib/catalog'
 
 export default function List() {
   const { nodeId='' } = useParams()
   const { nodes } = useStore()
-  const items = childrenOf(nodes, nodeId)
-
-  // derive title
+  const items = nodes.filter(n=>n.parentId===nodeId).sort((a,b)=>a.order-b.order)
   const title = nodes.find(n=>n.id===nodeId)?.title ?? 'פריטים'
+  const parent = nodes.find(n=>n.id===nodeId)?.parentId
 
   return (
     <div>
-      <Header title={title} backTo={items[0]?.parentId ? `/list/${encodeURIComponent(items[0].parentId)}` : '/'} action="calendar" />
+      <Header title={title} backTo={parent?`/list/${encodeURIComponent(parent)}`:'/'} action="admin" />
       <div className="container">
         <div className="flex flex-col gap-2">
           {items.map(it => {
@@ -22,7 +20,6 @@ export default function List() {
             return (
               <Link key={it.id} to={href} className={`card card-${color}`}>
                 <div className="name">{it.title}</div>
-                {it.meta?.pct && <div className="pct">{it.meta.pct}</div>}
               </Link>
             )
           })}

@@ -1,7 +1,5 @@
-// COMPILE-SAFE EXPORTS
-import type { Node } from '@/store/store'
+import type { Node } from '@/lib/db'
 const BASE = 'https://www.sefaria.org/api'
-
 async function j(url: string){ const r = await fetch(url); if (!r.ok) throw new Error('HTTP '+r.status); return r.json() as any }
 function A<T>(x:any): T[] { return Array.isArray(x) ? (x as T[]) : [] }
 function toHebNum(n: number){ const map = ['','א','ב','ג','ד','ה','ו','ז','ח','ט','י','יא','יב','יג','יד','טו','טז','יז','יח','יט','כ','כא','כב','כג','כד','כה','כו','כז','כח','כט','ל']; return n < map.length ? map[n] : String(n) }

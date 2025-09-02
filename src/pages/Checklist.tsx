@@ -7,10 +7,11 @@ export default function Checklist() {
   const { nodes, progress, toggle, markAll } = useStore()
   const title = nodes.find(n=>n.id===nodeId)?.title ?? ''
   const items = nodes.filter(n => n.parentId === nodeId && n.kind === 'check')
+  const parent = nodes.find(n=>n.id===nodeId)?.parentId
 
   return (
     <div>
-      <Header title={title} backTo={`/list/${encodeURIComponent(nodes.find(n=>n.id===nodeId)?.parentId ?? 'home')}`} action="mark" />
+      <Header title={title} backTo={parent?`/list/${encodeURIComponent(parent)}`:'/'} action="admin" />
       <div className="container">
         <div className="mb-2">
           <button className="btn btn-primary" onClick={()=>markAll(nodeId, true)}>סמן הכל</button>

@@ -1,37 +1,6 @@
-import Dexie, { Table } from 'dexie'
 import { create } from 'zustand'
+import { db, type Node } from '@/lib/db'
 
-// ==== Types ====
-export type Color = 'blue'|'brown'|'orange'|'grey'
-export type Node = {
-  id: string
-  title: string
-  kind: 'card' | 'check'
-  color?: Color
-  parentId?: string
-  order: number
-  meta?: Record<string, any>
-}
-export type Progress = { id?: number, unitId: string, count: number, completedAt: string }
-export type Setting = { key: string, value: any }
-
-// ==== DB ====
-class TTDB extends Dexie {
-  nodes!: Table<Node, string>
-  progress!: Table<Progress, number>
-  settings!: Table<Setting, string>
-  constructor() {
-    super('torah-tracker-ios')
-    this.version(1).stores({
-      nodes: '&id, parentId, kind, order',
-      progress: '++id, unitId, completedAt',
-      settings: 'key'
-    })
-  }
-}
-export const db = new TTDB()
-
-// ==== Store ====
 type State = {
   nodes: Node[]
   progress: Record<string, number>
@@ -61,7 +30,7 @@ export const useStore = create<State & Actions>((set, get) => ({
   setNodesReplace: async (nodes: Node[]) => {
     await db.transaction('rw', db.nodes, async () => {
       await db.nodes.clear()
-      await db.nodes.bulkPut(nodes) // upsert-safe
+      await db.nodes.bulkPut(nodes)
     })
     set({ nodes })
   },
@@ -93,7 +62,9 @@ export const useStore = create<State & Actions>((set, get) => ({
   clearAll: async () => { await db.delete(); window.location.reload() }
 }))
 
-// Standalone helper export (אם יש קוד שקורא מבחוץ)
+export type { Node } from '@/lib/db'
+export { db } from '@/lib/db'
+
 export async function setNodesReplace(nodes: Node[]) {
   await db.transaction('rw', db.nodes, async () => {
     await db.nodes.clear()
